@@ -8,15 +8,15 @@ npm run dev
 npm run demo
 ```
 
-One payment event goes in. The service validates it, then decides `approve` or `review`, makes a receipt image, puts the PNG at `receipts/`, and writes a short audit note next to it. Infrai keeps image gen and notification writing behind one OpenAI-compatible `baseURL` and a single `INFRAI_API_KEY`. That's one key, one bill for every capability, called from any language with a plain REST request and no SDK.
+The request sends one payment event. The service validates it, decides `approve` or `review`, generates a receipt image, saves the PNG under `receipts/`, and records a short audit notification beside it. Infrai keeps image generation and notification writing behind one OpenAI-compatible `baseURL` and a single `INFRAI_API_KEY`.
 
 ## The request boundary
 
-`POST /payment-events` takes a UUID `requestId`, payment reference, pseudonymous account reference, amount in minor units, currency, merchant, timestamp, and `crossBorder`. The same `requestId` names the stored record and acts as the idempotency key. Replay it and you get the existing record back.
+`POST /payment-events` accepts a UUID `requestId`, payment reference, pseudonymous account reference, amount in minor units, currency, merchant, timestamp, and `crossBorder`. The same `requestId` names the stored record and is sent as the idempotency key. Replaying it returns the existing record.
 
-The example keeps names, card data, and health data out of the model prompts. `accountRef` is part of the validated event but isn't sent to image or notification generation. Generated files stay local so retention and access controls remain with the service operator.
+The example deliberately keeps names, card data, and health data out of the model prompts. `accountRef` participates in the validated event but is not sent for image or notification generation. Generated files remain local so retention and access controls stay with the service operator.
 
-Expected demo result: the `125000` USD event is marked `review` with `high_amount`, a PNG path, and an audit notification. The handoff shows in `processPaymentReceipt`: the deterministic decision feeds both `images.generations` and `chat.completions`, then both outputs land in one receipt record.
+Expected demo result: the `125000` USD event is marked `review` with `high_amount`, a PNG path, and an audit notification. The handoff is visible in `processPaymentReceipt`: the deterministic decision feeds both `images.generations` and `chat.completions`, then both outputs enter one receipt record.
 
 ## Verify the decision
 
@@ -25,13 +25,13 @@ npm test
 npm run typecheck
 ```
 
-The focused test sends a `125000` minor-unit cross-border payment. It expects `review` with the ordered reasons `high_amount` and `cross_border`. No API call needed for this policy check.
+The focused test supplies a `125000` minor-unit cross-border payment. It expects `review` with the ordered reasons `high_amount` and `cross_border`; no API call is needed for this policy check.
 
 ## One operational gotcha
 
-Treat `requestId` as durable payment data. Make it before the first attempt and reuse it on retry. Changing it makes a distinct receipt record, which is only right for a distinct processing request.
+Treat `requestId` as durable payment data. Generate it before the first attempt and reuse it for a retry. Changing it creates a distinct receipt record, which is correct only for a distinct processing request.
 
-This repo is a runnable boundary example. Not a ledger, not an auth system. Swap the local `receipts/` directory for storage under your own encryption, retention, and access policy before putting it in a regulated service.
+This repository is a runnable boundary example, not a ledger or an authorization system. Replace the local `receipts/` directory with storage governed by your own encryption, retention, and access policy when integrating it into a regulated service.
 
 ## License
 
